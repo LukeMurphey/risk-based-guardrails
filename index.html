@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retirement Guardrails Calculator</title>
+    <style>
+        :root {
+            --color-background: rgba(252, 252, 249, 1);
+            --color-surface: rgba(255, 255, 253, 1);
+            --color-text: rgba(19, 52, 59, 1);
+            --color-text-secondary: rgba(98, 108, 113, 1);
+            --color-primary: rgba(33, 128, 141, 1);
+            --color-primary-hover: rgba(29, 116, 128, 1);
+            --color-border: rgba(94, 82, 64, 0.2);
+            --color-success: rgba(33, 128, 141, 1);
+            --color-warning: rgba(168, 75, 47, 1);
+            --color-error: rgba(192, 21, 47, 1);
+            --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --radius-base: 8px;
+            --space-16: 16px;
+            --space-24: 24px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background: rgba(31, 33, 33, 1);
+                --color-surface: rgba(38, 40, 40, 1);
+                --color-text: rgba(245, 245, 245, 1);
+                --color-text-secondary: rgba(167, 169, 169, 0.7);
+                --color-primary: rgba(50, 184, 198, 1);
+                --color-primary-hover: rgba(45, 166, 178, 1);
+                --color-border: rgba(119, 124, 124, 0.3);
+                --color-success: rgba(50, 184, 198, 1);
+                --color-warning: rgba(230, 129, 97, 1);
+                --color-error: rgba(255, 84, 89, 1);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            background: var(--color-background);
+            color: var(--color-text);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: var(--color-text);
+        }
+
+        .subtitle {
+            color: var(--color-text-secondary);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .card {
+            background: var(--color-surface);
+            border-radius: var(--radius-base);
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--color-border);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: var(--color-text);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--color-text);
+        }
+
+        input, select {
+            padding: 10px 12px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            font-size: 14px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: 2px solid var(--color-primary);
+            border-color: var(--color-primary);
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, var(--color-primary) 0%, rgba(33, 128, 141, 0.8) 100%);
+            color: white;
+            padding: 24px;
+            border-radius: var(--radius-base);
+            margin-bottom: 16px;
+        }
+
+        .result-box h3 {
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .result-subtitle {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .guardrails-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .guardrail-item {
+            padding: 16px;
+            border-radius: var(--radius-base);
+            border: 2px solid;
+        }
+
+        .guardrail-item.lower {
+            border-color: var(--color-error);
+            background: rgba(192, 21, 47, 0.05);
+        }
+
+        .guardrail-item.upper {
+            border-color: var(--color-success);
+            background: rgba(33, 128, 141, 0.05);
+        }
+
+        .guardrail-item h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .guardrail-item .value {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .guardrail-item .description {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        .status-message {
+            padding: 16px;
+            border-radius: var(--radius-base);
+            margin-top: 16px;
+            font-size: 14px;
+            border-left: 4px solid;
+        }
+
+        .status-message.success {
+            background: rgba(33, 128, 141, 0.1);
+            border-color: var(--color-success);
+        }
+
+        .status-message.warning {
+            background: rgba(168, 75, 47, 0.1);
+            border-color: var(--color-warning);
+        }
+
+        .status-message.error {
+            background: rgba(192, 21, 47, 0.1);
+            border-color: var(--color-error);
+        }
+
+        button {
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--radius-base);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--color-primary-hover);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .share-section {
+            padding: 16px;
+            background: rgba(33, 128, 141, 0.05);
+            border-radius: var(--radius-base);
+            margin-top: 16px;
+        }
+
+        .share-section input {
+            width: 100%;
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .info-text {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .simulation-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .stat-item {
+            padding: 12px;
+            background: rgba(33, 128, 141, 0.05);
+            border-radius: var(--radius-base);
+        }
+
+        .stat-item .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--color-text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-item .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        @media (max-width: 768px) {
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .guardrails-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Retirement Guardrails Calculator</h1>
+        <p class="subtitle">Calculate safe withdrawal rates using probability-of-success-driven guardrails with Monte Carlo simulation</p>
+
+        <div class="card">
+            <h2>Portfolio Information</h2>
+            <div class="input-grid">
+                <div class="form-group">
+                    <label for="portfolioSize">Portfolio Size ($)</label>
+                    <input type="number" id="portfolioSize" value="1000000" min="0" step="1000">
+                </div>
+                <div class="form-group">
+                    <label for="currentWithdrawal">Current Annual Withdrawal ($) - Optional</label>
+                    <input type="number" id="currentWithdrawal" value="" min="0" step="1000" placeholder="Leave blank if new plan">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Asset Allocation</h2>
+            <div class="input-grid">
+                <div class="form-group">
+                    <label for="stockPercent">Stocks (%)</label>
+                    <input type="number" id="stockPercent" value="60" min="0" max="100" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="stockFees">Stock Fees (%)</label>
+                    <input type="number" id="stockFees" value="0.04" min="0" max="10" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="bondPercent">Bonds (%)</label>
+                    <input type="number" id="bondPercent" value="30" min="0" max="100" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="bondFees">Bond Fees (%)</label>
+                    <input type="number" id="bondFees" value="0.04" min="0" max="10" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="cashPercent">Cash (%)</label>
+                    <input type="number" id="cashPercent" value="10" min="0" max="100" step="1">
+                </div>
+            </div>
+            <p class="info-text" id="allocationWarning"></p>
+        </div>
+
+        <div class="card">
+            <h2>Guardrail Settings</h2>
+            <div class="input-grid">
+                <div class="form-group">
+                    <label for="targetSuccess">Target Success Rate (%)</label>
+                    <input type="number" id="targetSuccess" value="80" min="50" max="99" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="lowerGuardrail">Lower Guardrail (%)</label>
+                    <input type="number" id="lowerGuardrail" value="70" min="50" max="99" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="upperGuardrail">Upper Guardrail (%)</label>
+                    <input type="number" id="upperGuardrail" value="90" min="50" max="99" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="retirementYears">Retirement Horizon (years)</label>
+                    <input type="number" id="retirementYears" value="30" min="10" max="50" step="1">
+                </div>
+            </div>
+            <p class="info-text">Guardrails define when to adjust spending. If probability drops below lower guardrail, cut spending. If it rises above upper guardrail, increase spending.</p>
+        </div>
+
+        <div class="button-group">
+            <button onclick="calculate()" id="calculateBtn">Calculate Withdrawal Rate</button>
+            <button onclick="generateShareLink()">Generate Share Link</button>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div class="card">
+                <h2>Recommended Withdrawal Strategy</h2>
+                <div class="result-box">
+                    <h3>Safe Annual Withdrawal</h3>
+                    <div class="result-value" id="annualWithdrawal">$0</div>
+                    <div class="result-subtitle" id="withdrawalRate">0% of portfolio</div>
+                </div>
+
+                <div id="guardrailsDisplay" class="guardrails-grid">
+                    <div class="guardrail-item lower">
+                        <h4>Lower Guardrail</h4>
+                        <div class="value" id="lowerPortfolio">$0</div>
+                        <div class="description">Cut spending to <span id="lowerSpending">$0</span>/year</div>
+                    </div>
+                    <div class="guardrail-item upper">
+                        <h4>Upper Guardrail</h4>
+                        <div class="value" id="upperPortfolio">$0</div>
+                        <div class="description">Increase spending to <span id="upperSpending">$0</span>/year</div>
+                    </div>
+                </div>
+
+                <div id="statusMessage"></div>
+
+                <div class="simulation-stats">
+                    <div class="stat-item">
+                        <div class="label">Success Rate</div>
+                        <div class="value" id="successRate">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">Simulations Run</div>
+                        <div class="value" id="simCount">1000</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">Portfolio Return</div>
+                        <div class="value" id="expectedReturn">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">Portfolio Risk</div>
+                        <div class="value" id="portfolioRisk">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="share-section">
+                <strong>Share Link</strong>
+                <input type="text" id="shareLink" readonly onclick="this.select()">
+                <p class="info-text">Copy this link to save your parameters or share with others</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Historical market assumptions
+        const STOCK_RETURN = 0.10; // 10% average
+        const STOCK_VOLATILITY = 0.18; // 18% standard deviation
+        const BOND_RETURN = 0.045; // 4.5% average
+        const BOND_VOLATILITY = 0.06; // 6% standard deviation
+        const CASH_RETURN = 0.025; // 2.5% average
+        const INFLATION = 0.03; // 3% inflation
+        const SIMULATIONS = 1000;
+        const STOCK_BOND_CORRELATION = 0.2;
+
+        // Load parameters from URL or localStorage on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromURL() || loadFromStorage();
+            updateAllocationWarning();
+        });
+
+        // Save to localStorage whenever inputs change
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                saveToStorage();
+                if (input.id.includes('Percent')) {
+                    updateAllocationWarning();
+                }
+            });
+        });
+
+        function updateAllocationWarning() {
+            const stock = parseFloat(document.getElementById('stockPercent').value) || 0;
+            const bond = parseFloat(document.getElementById('bondPercent').value) || 0;
+            const cash = parseFloat(document.getElementById('cashPercent').value) || 0;
+            const total = stock + bond + cash;
+            const warning = document.getElementById('allocationWarning');
+            
+            if (Math.abs(total - 100) > 0.01) {
+                warning.textContent = `⚠️ Total allocation: ${total.toFixed(1)}% (should equal 100%)`;
+                warning.style.color = 'var(--color-error)';
+            } else {
+                warning.textContent = '✓ Allocation adds up to 100%';
+                warning.style.color = 'var(--color-success)';
+            }
+        }
+
+        function saveToStorage() {
+            const params = getInputParams();
+            localStorage.setItem('retirementGuardrails', JSON.stringify(params));
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem('retirementGuardrails');
+            if (saved) {
+                const params = JSON.parse(saved);
+                setInputParams(params);
+                return true;
+            }
+            return false;
+        }
+
+        function loadFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('portfolio')) {
+                const params = {
+                    portfolioSize: parseFloat(urlParams.get('portfolio')),
+                    currentWithdrawal: urlParams.get('withdrawal') ? parseFloat(urlParams.get('withdrawal')) : null,
+                    stockPercent: parseFloat(urlParams.get('stocks')),
+                    stockFees: parseFloat(urlParams.get('stockFees')),
+                    bondPercent: parseFloat(urlParams.get('bonds')),
+                    bondFees: parseFloat(urlParams.get('bondFees')),
+                    cashPercent: parseFloat(urlParams.get('cash')),
+                    targetSuccess: parseFloat(urlParams.get('target')),
+                    lowerGuardrail: parseFloat(urlParams.get('lower')),
+                    upperGuardrail: parseFloat(urlParams.get('upper')),
+                    retirementYears: parseInt(urlParams.get('years'))
+                };
+                setInputParams(params);
+                calculate();
+                return true;
+            }
+            return false;
+        }
+
+        function getInputParams() {
+            return {
+                portfolioSize: parseFloat(document.getElementById('portfolioSize').value),
+                currentWithdrawal: document.getElementById('currentWithdrawal').value ? 
+                    parseFloat(document.getElementById('currentWithdrawal').value) : null,
+                stockPercent: parseFloat(document.getElementById('stockPercent').value),
+                stockFees: parseFloat(document.getElementById('stockFees').value),
+                bondPercent: parseFloat(document.getElementById('bondPercent').value),
+                bondFees: parseFloat(document.getElementById('bondFees').value),
+                cashPercent: parseFloat(document.getElementById('cashPercent').value),
+                targetSuccess: parseFloat(document.getElementById('targetSuccess').value),
+                lowerGuardrail: parseFloat(document.getElementById('lowerGuardrail').value),
+                upperGuardrail: parseFloat(document.getElementById('upperGuardrail').value),
+                retirementYears: parseInt(document.getElementById('retirementYears').value)
+            };
+        }
+
+        function setInputParams(params) {
+            document.getElementById('portfolioSize').value = params.portfolioSize;
+            if (params.currentWithdrawal) {
+                document.getElementById('currentWithdrawal').value = params.currentWithdrawal;
+            }
+            document.getElementById('stockPercent').value = params.stockPercent;
+            document.getElementById('stockFees').value = params.stockFees;
+            document.getElementById('bondPercent').value = params.bondPercent;
+            document.getElementById('bondFees').value = params.bondFees;
+            document.getElementById('cashPercent').value = params.cashPercent;
+            document.getElementById('targetSuccess').value = params.targetSuccess;
+            document.getElementById('lowerGuardrail').value = params.lowerGuardrail;
+            document.getElementById('upperGuardrail').value = params.upperGuardrail;
+            document.getElementById('retirementYears').value = params.retirementYears;
+        }
+
+        function generateShareLink() {
+            const params = getInputParams();
+            const url = new URL(window.location.href.split('?')[0]);
+            url.searchParams.set('portfolio', params.portfolioSize);
+            if (params.currentWithdrawal) {
+                url.searchParams.set('withdrawal', params.currentWithdrawal);
+            }
+            url.searchParams.set('stocks', params.stockPercent);
+            url.searchParams.set('stockFees', params.stockFees);
+            url.searchParams.set('bonds', params.bondPercent);
+            url.searchParams.set('bondFees', params.bondFees);
+            url.searchParams.set('cash', params.cashPercent);
+            url.searchParams.set('target', params.targetSuccess);
+            url.searchParams.set('lower', params.lowerGuardrail);
+            url.searchParams.set('upper', params.upperGuardrail);
+            url.searchParams.set('years', params.retirementYears);
+            
+            document.getElementById('shareLink').value = url.toString();
+            document.getElementById('shareLink').select();
+            navigator.clipboard.writeText(url.toString());
+            alert('Share link copied to clipboard!');
+        }
+
+        // Box-Muller transform for normal distribution
+        function normalRandom(mean, stdDev) {
+            let u1 = Math.random();
+            let u2 = Math.random();
+            let z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            return mean + stdDev * z0;
+        }
+
+        // Correlated returns for stocks and bonds
+        function generateCorrelatedReturns(stockReturn, stockVol, bondReturn, bondVol, correlation) {
+            const z1 = normalRandom(0, 1);
+            const z2 = normalRandom(0, 1);
+            
+            const stockRet = stockReturn + stockVol * z1;
+            const bondRet = bondReturn + bondVol * (correlation * z1 + Math.sqrt(1 - correlation * correlation) * z2);
+            
+            return { stock: stockRet, bond: bondRet };
+        }
+
+        function calculatePortfolioStats(params) {
+            const stockWeight = params.stockPercent / 100;
+            const bondWeight = params.bondPercent / 100;
+            const cashWeight = params.cashPercent / 100;
+            
+            // Net returns after fees
+            const netStockReturn = STOCK_RETURN - (params.stockFees / 100);
+            const netBondReturn = BOND_RETURN - (params.bondFees / 100);
+            
+            const expectedReturn = stockWeight * netStockReturn + 
+                                 bondWeight * netBondReturn + 
+                                 cashWeight * CASH_RETURN;
+            
+            // Portfolio volatility with correlation
+            const portfolioVariance = Math.pow(stockWeight * STOCK_VOLATILITY, 2) +
+                                     Math.pow(bondWeight * BOND_VOLATILITY, 2) +
+                                     2 * stockWeight * bondWeight * STOCK_VOLATILITY * BOND_VOLATILITY * STOCK_BOND_CORRELATION;
+            
+            const portfolioStdDev = Math.sqrt(portfolioVariance);
+            
+            return { expectedReturn, portfolioStdDev };
+        }
+
+        function runMonteCarlo(portfolioValue, withdrawal, years, params) {
+            const stockWeight = params.stockPercent / 100;
+            const bondWeight = params.bondPercent / 100;
+            const cashWeight = params.cashPercent / 100;
+            
+            const netStockReturn = STOCK_RETURN - (params.stockFees / 100);
+            const netBondReturn = BOND_RETURN - (params.bondFees / 100);
+            
+            let successCount = 0;
+            
+            for (let sim = 0; sim < SIMULATIONS; sim++) {
+                let balance = portfolioValue;
+                let annualWithdrawal = withdrawal;
+                
+                for (let year = 0; year < years; year++) {
+                    // Generate correlated returns
+                    const returns = generateCorrelatedReturns(
+                        netStockReturn, STOCK_VOLATILITY,
+                        netBondReturn, BOND_VOLATILITY,
+                        STOCK_BOND_CORRELATION
+                    );
+                    
+                    // Calculate portfolio return
+                    const portfolioReturn = stockWeight * returns.stock +
+                                          bondWeight * returns.bond +
+                                          cashWeight * CASH_RETURN;
+                    
+                    // Apply return and subtract withdrawal
+                    balance = balance * (1 + portfolioReturn) - annualWithdrawal;
+                    
+                    // Adjust withdrawal for inflation
+                    annualWithdrawal *= (1 + INFLATION);
+                    
+                    if (balance <= 0) break;
+                }
+                
+                if (balance > 0) successCount++;
+            }
+            
+            return (successCount / SIMULATIONS) * 100;
+        }
+
+        function findWithdrawalForSuccessRate(portfolioValue, targetRate, years, params) {
+            let low = 0;
+            let high = portfolioValue * 0.10; // Max 10% withdrawal
+            let best = 0;
+            
+            // Binary search for withdrawal amount
+            for (let i = 0; i < 20; i++) {
+                const mid = (low + high) / 2;
+                const successRate = runMonteCarlo(portfolioValue, mid, years, params);
+                
+                if (Math.abs(successRate - targetRate) < 1) {
+                    return mid;
+                }
+                
+                if (successRate > targetRate) {
+                    low = mid;
+                    best = mid;
+                } else {
+                    high = mid;
+                }
+            }
+            
+            return best;
+        }
+
+        function findPortfolioForSuccessRate(currentSpending, targetRate, years, params) {
+            let low = currentSpending * 10;
+            let high = currentSpending * 50;
+            
+            for (let i = 0; i < 20; i++) {
+                const mid = (low + high) / 2;
+                const successRate = runMonteCarlo(mid, currentSpending, years, params);
+                
+                if (Math.abs(successRate - targetRate) < 1) {
+                    return mid;
+                }
+                
+                if (successRate < targetRate) {
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            }
+            
+            return (low + high) / 2;
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        function calculate() {
+            const btn = document.getElementById('calculateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Calculating...';
+            
+            setTimeout(() => {
+                const params = getInputParams();
+                
+                // Validate allocation
+                const totalAllocation = params.stockPercent + params.bondPercent + params.cashPercent;
+                if (Math.abs(totalAllocation - 100) > 0.01) {
+                    alert('Asset allocation must equal 100%');
+                    btn.disabled = false;
+                    btn.textContent = 'Calculate Withdrawal Rate';
+                    return;
+                }
+                
+                // Calculate portfolio statistics
+                const stats = calculatePortfolioStats(params);
+                
+                // Find withdrawal amount for target success rate
+                const targetWithdrawal = findWithdrawalForSuccessRate(
+                    params.portfolioSize,
+                    params.targetSuccess,
+                    params.retirementYears,
+                    params
+                );
+                
+                const withdrawalRate = (targetWithdrawal / params.portfolioSize) * 100;
+                
+                // Find portfolio values at guardrails
+                const lowerPortfolioValue = findPortfolioForSuccessRate(
+                    targetWithdrawal,
+                    params.lowerGuardrail,
+                    params.retirementYears,
+                    params
+                );
+                
+                const upperPortfolioValue = findPortfolioForSuccessRate(
+                    targetWithdrawal,
+                    params.upperGuardrail,
+                    params.retirementYears,
+                    params
+                );
+                
+                // Calculate adjusted spending at guardrails (10% adjustment toward target)
+                const adjustmentFactor = 0.10;
+                const lowerSuccessDiff = params.targetSuccess - params.lowerGuardrail;
+                const upperSuccessDiff = params.upperGuardrail - params.targetSuccess;
+                
+                const lowerAdjustedTarget = params.lowerGuardrail + (lowerSuccessDiff * adjustmentFactor);
+                const upperAdjustedTarget = params.upperGuardrail - (upperSuccessDiff * adjustmentFactor);
+                
+                const lowerSpending = findWithdrawalForSuccessRate(
+                    lowerPortfolioValue,
+                    lowerAdjustedTarget,
+                    params.retirementYears,
+                    params
+                );
+                
+                const upperSpending = findWithdrawalForSuccessRate(
+                    upperPortfolioValue,
+                    upperAdjustedTarget,
+                    params.retirementYears,
+                    params
+                );
+                
+                // Display results
+                document.getElementById('annualWithdrawal').textContent = formatCurrency(targetWithdrawal);
+                document.getElementById('withdrawalRate').textContent = 
+                    `${withdrawalRate.toFixed(2)}% of portfolio (${formatCurrency(targetWithdrawal / 12)}/month)`;
+                
+                document.getElementById('lowerPortfolio').textContent = formatCurrency(lowerPortfolioValue);
+                document.getElementById('lowerSpending').textContent = formatCurrency(lowerSpending);
+                
+                document.getElementById('upperPortfolio').textContent = formatCurrency(upperPortfolioValue);
+                document.getElementById('upperSpending').textContent = formatCurrency(upperSpending);
+                
+                document.getElementById('successRate').textContent = `${params.targetSuccess}%`;
+                document.getElementById('simCount').textContent = SIMULATIONS.toLocaleString();
+                document.getElementById('expectedReturn').textContent = `${(stats.expectedReturn * 100).toFixed(2)}%`;
+                document.getElementById('portfolioRisk').textContent = `${(stats.portfolioStdDev * 100).toFixed(2)}%`;
+                
+                // Status message for current withdrawal
+                const statusDiv = document.getElementById('statusMessage');
+                if (params.currentWithdrawal) {
+                    const currentRate = (params.currentWithdrawal / params.portfolioSize) * 100;
+                    const currentSuccess = runMonteCarlo(
+                        params.portfolioSize,
+                        params.currentWithdrawal,
+                        params.retirementYears,
+                        params
+                    );
+                    
+                    let statusClass = 'success';
+                    let statusText = '';
+                    
+                    if (params.portfolioSize <= lowerPortfolioValue) {
+                        statusClass = 'error';
+                        statusText = `⚠️ <strong>Action Required:</strong> Your portfolio is below the lower guardrail. Current success rate: ${currentSuccess.toFixed(1)}%. Consider reducing spending to ${formatCurrency(lowerSpending)}/year to get back on track.`;
+                    } else if (params.portfolioSize >= upperPortfolioValue) {
+                        statusClass = 'success';
+                        statusText = `✓ <strong>Good News:</strong> Your portfolio is above the upper guardrail! Current success rate: ${currentSuccess.toFixed(1)}%. You can safely increase spending to ${formatCurrency(upperSpending)}/year.`;
+                    } else {
+                        statusClass = 'success';
+                        statusText = `✓ <strong>On Track:</strong> Your current withdrawal of ${formatCurrency(params.currentWithdrawal)}/year (${currentRate.toFixed(2)}%) is within guardrails. Success rate: ${currentSuccess.toFixed(1)}%. No adjustment needed.`;
+                    }
+                    
+                    statusDiv.className = `status-message ${statusClass}`;
+                    statusDiv.innerHTML = statusText;
+                    statusDiv.style.display = 'block';
+                } else {
+                    statusDiv.style.display = 'none';
+                }
+                
+                document.getElementById('results').style.display = 'block';
+                generateShareLink();
+                
+                btn.disabled = false;
+                btn.textContent = 'Recalculate';
+                
+                // Scroll to results
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+    </script>
+</body>
+</html>
