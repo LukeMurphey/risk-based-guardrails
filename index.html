@@ -1378,8 +1378,8 @@
         { label: 'Current Withdrawal', value: fmtDollar(guardrailsResult.currentWd) + '/yr' },
         { label: 'Current Success Rate', value: fmtPOS(guardrailsResult.currentPOS) },
         { label: guardrailsResult.suggestedNew ? 'Suggested New Amount' : 'Safe Amount (80%)', value: fmtDollar(guardrailsResult.suggestedNew || res.safeWithdrawal) + '/yr' },
-        { label: 'Raise Spending If Above', value: fmtDollar(guardrailsResult.upperWithdrawal) + '/yr (95% POS)' },
-        { label: 'Cut Spending If Below', value: fmtDollar(guardrailsResult.lowerWithdrawal) + '/yr (70% POS)' },
+        { label: 'Raise Spending If Below', value: fmtDollar(guardrailsResult.upperWithdrawal) + '/yr (95% POS)' },
+        { label: 'Cut Spending If Above', value: fmtDollar(guardrailsResult.lowerWithdrawal) + '/yr (70% POS)' },
         { label: 'Horizon', value: state.horizonYears + ' years' },
       ];
       items.forEach(item => {
